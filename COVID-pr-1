@@ -25,8 +25,8 @@ Death_data<-dbGetQuery(con_DW_ODBC,
               SELECT tt1.REPORT, tt1.IDNO, tt1.NAME, tt2.SAMPLE_TYPE_DESC, tt2.SAMPLE, tt2.SAMPLE_DATE, tt2.RESULT, tt2.inform_date, tt2.comments , tt1.DEATH_DATE, tt1.CONFIRM_DATE
                       from(
                           SELECT t1.REPORT, t1.IDNO, t2.NAME, t1.DEATH_DATE, t1.DEATH_CNT, t1.CONFIRM_DATE
-                          from CDCDW.USV_DWS_REPORT_DETAIL_EIC t1
-                          left join CDCDW.USV_INDIVIDUAL_SAS t2 on t1.INDIVIDUAL = t2.INDIVIDUAL
+                          from ~ t1
+                          left join ~ t2 on t1.INDIVIDUAL = t2.INDIVIDUAL
                           where disease = '19CoV'
                           and DETERMINED_STATUS_NEW ='30'
                           and DEATH_CNT = '1' 
@@ -40,12 +40,10 @@ Death_data<-dbGetQuery(con_DW_ODBC,
                     left join CDCDW.DWS_SAMPLE_DETAIL t2 on t1.SAMPLE = t2.SAMPLE
                     left join CDCDW.DIM_SAMPLE_TYPE t3 on t2.SAMPLE_TYPE = t3.SAMPLE_TYPE
                     
-                    where t1.DISEASE = '19CoV'
-                    and t2.DISEASE = '19CoV'
+                    where t1.DISEASE = '~'
+                    and t2.DISEASE = '~'
                     and t2.result in ('5','1')
-                    and t2.sample_date >= TO_DATE('2020/1/1', 'YYYY/MM/DD')
-                    and t3.SAMPLE_TYPE_DESC in ('下呼吸道抽取物','咽喉擦拭液','唾液','唾液(機場專用)','痰',
-                                                  '痰液','鼻咽拭子/咽喉擦拭','鼻咽拭子/咽喉擦拭-病毒','鼻咽拭子-鼻咽擦拭-PCR',
-                                                  '鼻咽喉分泌物','鼻咽擦拭液')
+                    and t2.sample_date >= TO_DATE('~', 'YYYY/MM/DD')
+                    and t3.SAMPLE_TYPE_DESC in ('~')
                )tt2 on tt1.REPORT = tt2.REPORT
              ")  %>%  mutate(RESULT =ifelse(.$RESULT == '1', "陰性", "陽性"))
