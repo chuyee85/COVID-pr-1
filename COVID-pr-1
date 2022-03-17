@@ -11,7 +11,7 @@ library(xlsx)
 url = '~'
 h <- new_handle()
 handle_setopt(h, ssl_verifyhost = 0, ssl_verifypeer=0)
-curl_download(url, "/media/sf_Eic02/COVID_hotel/new_pr/案號.xlsx", handle = h)
+curl_download(url, "~", handle = h)
 
 list_check_case_number<-read_excel("~",  sheet = "工作表1",skip = 1) %>% 
   select(~,~) 
