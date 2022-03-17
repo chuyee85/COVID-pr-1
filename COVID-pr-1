@@ -1,0 +1,51 @@
+library(httr)
+library(dplyr)
+library(curl)
+library(tidyverse)
+library(DBI)
+library(readxl)
+library(openxlsx)
+library(xlsx)
+
+##案次號表
+url = '~'
+h <- new_handle()
+handle_setopt(h, ssl_verifyhost = 0, ssl_verifypeer=0)
+curl_download(url, "/media/sf_Eic02/COVID_hotel/new_pr/案號.xlsx", handle = h)
+
+list_check_case_number<-read_excel("~",  sheet = "工作表1",skip = 1) %>% 
+  select(~,~) 
+colnames(list_check_case_number)[1] <- "REPORT"
+list_check_case_number$REPORT<-list_check_case_number$REPORT %>% as.character()
+
+con_DW_ODBC <- dbConnect(odbc::odbc(), "~", UID = "~", PWD = "~")
+
+Death_data<-dbGetQuery(con_DW_ODBC,
+             "  
+              SELECT tt1.REPORT, tt1.IDNO, tt1.NAME, tt2.SAMPLE_TYPE_DESC, tt2.SAMPLE, tt2.SAMPLE_DATE, tt2.RESULT, tt2.inform_date, tt2.comments , tt1.DEATH_DATE, tt1.CONFIRM_DATE
+                      from(
+                          SELECT t1.REPORT, t1.IDNO, t2.NAME, t1.DEATH_DATE, t1.DEATH_CNT, t1.CONFIRM_DATE
+                          from CDCDW.USV_DWS_REPORT_DETAIL_EIC t1
+                          left join CDCDW.USV_INDIVIDUAL_SAS t2 on t1.INDIVIDUAL = t2.INDIVIDUAL
+                          where disease = '19CoV'
+                          and DETERMINED_STATUS_NEW ='30'
+                          and DEATH_CNT = '1' 
+                    )tt1
+                    
+               left join(
+                    SELECT t1.SAMPLE, t1.RESULT_DATE, t1.comments, t2.INDIVIDUAL, t2.REPORT, t3.SAMPLE_TYPE_DESC, t2.inform_date, t2.SAMPLE_DATE, t2.RESULT
+                    
+                    FROM CDCDW.SAMPLE_PATHOGEN_RESULT t1
+                    
+                    left join CDCDW.DWS_SAMPLE_DETAIL t2 on t1.SAMPLE = t2.SAMPLE
+                    left join CDCDW.DIM_SAMPLE_TYPE t3 on t2.SAMPLE_TYPE = t3.SAMPLE_TYPE
+                    
+                    where t1.DISEASE = '19CoV'
+                    and t2.DISEASE = '19CoV'
+                    and t2.result in ('5','1')
+                    and t2.sample_date >= TO_DATE('2020/1/1', 'YYYY/MM/DD')
+                    and t3.SAMPLE_TYPE_DESC in ('下呼吸道抽取物','咽喉擦拭液','唾液','唾液(機場專用)','痰',
+                                                  '痰液','鼻咽拭子/咽喉擦拭','鼻咽拭子/咽喉擦拭-病毒','鼻咽拭子-鼻咽擦拭-PCR',
+                                                  '鼻咽喉分泌物','鼻咽擦拭液')
+               )tt2 on tt1.REPORT = tt2.REPORT
+             ")  %>%  mutate(RESULT =ifelse(.$RESULT == '1', "陰性", "陽性"))
